@@ -19,9 +19,11 @@ class GameServer(Server):
         
 
     def AddPlayer(self, player):
-        print "Adding player"
-        self.players[player] = player
+        print "Adding player "
         game = self.getAvailableGames()
+        uuid = player.uuid
+        self.players[uuid] = player
+        player.Send({"action":"getUUID", "message": str(uuid)})
         if not game is None:
             player.inGame = True
             self.games[game].addPlayer(player)
@@ -30,7 +32,7 @@ class GameServer(Server):
             if game.minPlayersConnected() == True:
                 for p in players:
                     p.Send({"action":"inGame", "message": True})
-                    self.players[p].inGame = True
+                    self.players[p.uuid].inGame = True
                
         else:
             game = Game()
@@ -47,6 +49,9 @@ class GameServer(Server):
                 game = g
                 break
         return game
+    def getPlayer(self, playerUUID):
+        uuid = self.convertUUID(playerUUID)
+        return self.players[uuid]
     
     def DelPlayer(self, player):
         print "Deleting Player " + str(player.nickName)
@@ -61,9 +66,17 @@ class GameServer(Server):
                 del self.games[game]
         else:
             [p.Send({"action": "message", "message": str(p.nickName) + " left the game"}) for p in players]
-    
+            
+    def sendPlayer(self, playerUUID, data):
+        uuid = self.convertUUID(playerUUID)
+        self.players[uuid].Send(data)
+        
     def SendPlayers(self, nickName):
         self.SendToAll({"action": "message", "message": str(nickName) + " has joined"})
+    
+    def convertUUID(self, data):
+        strUUID = uuid.UUID(data["message"]).hex
+        return uuid.UUID(strUUID)
     
     def SendToAll(self, data):
         [p.Send(data) for p in self.players]

@@ -1,3 +1,4 @@
+import uuid
 from PodSixNet.Channel import Channel
 class PlayerServer(Channel):
     """
@@ -7,6 +8,8 @@ class PlayerServer(Channel):
         self.nickName = "anonymous"
         self.inGame = False
         self.game = None
+        self.gameClient = None
+        self.uuid = uuid.uuid1()
         Channel.__init__(self, *args, **kwargs)
     
     def Close(self):
@@ -20,6 +23,23 @@ class PlayerServer(Channel):
         self._server.SendToAll({"action": "message", "message": data['message'], "who": self.nickName})
         
     def Network_nickname(self, data):
-        self.nickName = data["nickName"]
+        self.gameClient = data["data"]
+        self.nickName = self.gameClient["nickName"]
         print self.nickName, " entered the game"
-        self._server.SendPlayers(self.nickName)
+        #self._server.SendPlayers(self.nickName)
+    
+    def Network_updatePlayer(self, data):
+        self.gameClient = data["data"]
+    
+
+    def Network_getClientStatus(self, requestorUUID):
+        print "Get client status ", requestorUUID
+        player = self._server.getPlayer(requestorUUID)
+        playersInGame = player.game.getPlayers()
+        playerStatuses = []
+        for p in playersInGame:
+            playerStatuses.append(p.gameClient)
+        data = {"action": "playerStatus", "message": playerStatuses}
+        self._server.sendPlayer(requestorUUID, data)
+        
+        
