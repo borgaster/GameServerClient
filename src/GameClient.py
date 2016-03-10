@@ -2,7 +2,6 @@ from sys import stdin, exit
 import sys
 from thread import *
 from time import sleep
-
 from PodSixNet.Connection import connection, ConnectionListener
 
 
@@ -26,7 +25,7 @@ class Player(ConnectionListener):
         # continually reads from stdin and sends whatever is typed to the server
         while 1:
             command = stdin.readline().rstrip("\n")
-            connection.Send({"action":"getClientStatus", "message":self.playerAttributes["uuid"]})
+            #connection.Send({"action":"getClientStatus", "message":self.playerAttributes["uuid"]})
             if(command == 'w'):
                 self.playerAttributes["dy"] = self.playerAttributes["dy"] + 1
             elif(command == 's'):
@@ -36,14 +35,11 @@ class Player(ConnectionListener):
     ### Network event/message callbacks ###
     #######################################
     
-    def Network_playerStatus(self, data):
-        print data["message"]
-        
     def Network_players(self, data):
-        print "*** players: " + ", ".join([p for p in data['players']])
+        print("*** players: " + ", ".join([p for p in data['players']]))
     
     def Network_message(self, data):
-        print data
+        print(data)
         
     def Network_getUUID(self, data):
         self.playerAttributes["uuid"] = data["message"]
@@ -52,21 +48,21 @@ class Player(ConnectionListener):
     def Network_inGame(self, data):
         self.playerAttributes["inGame"] = data["message"]
         if self.playerAttributes["inGame"] == True:
-            print "Game is starting"
+            print("Game is starting")
         else:
-            print "Oponent left game"
+            print("Oponent left game")
         
     # built in stuff
 
     def Network_connected(self, data):
-        print "You are now connected to the server"
+        print ("You are now connected to the server")
     
     def Network_error(self, data):
-        print 'error:', data['error']
+        print('error:', data['error'])
         connection.Close()
     
     def Network_disconnected(self, data):
-        print 'Server disconnected'
+        print('Server disconnected')
         exit()
 
     

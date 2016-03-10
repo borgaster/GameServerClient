@@ -4,14 +4,16 @@ import uuid
 from weakref import WeakKeyDictionary
 from Game import *
 from PlayerServer import *
+from PongGameServer import *
 from PodSixNet.Server import Server
 
 class GameServer(Server):
     channelClass = PlayerServer
     def __init__(self, *args, **kwargs):
-        Server.__init__(self, *args, **kwargs)
         self.players = WeakKeyDictionary()
         self.games = WeakKeyDictionary()
+        self.other = None
+        Server.__init__(self, *args, **kwargs)
         print 'Server launched'
         
     def Connected(self, channel, addr):
@@ -28,18 +30,21 @@ class GameServer(Server):
             player.inGame = True
             self.games[game].addPlayer(player)
             player.game = game
-            players = game.getPlayers()
-            if game.minPlayersConnected() == True:
-                for p in players:
-                    p.Send({"action":"inGame", "message": True})
-                    self.players[p.uuid].inGame = True
-               
+            opponents = game.getOpponents(player)
+            if (game.minPlayersConnected() == True):
+                player.inGame = True
+                #player.Send({"action": "inGameStart", "message": str(opponents[0].uuid)})
+                #self.other.Send({"action":"inGameStart", "message": str(uuid)})
+                for p in opponents:
+                    p.Send({"action":"inGameStart", "message": str(uuid)})
+                    self.players[p.uuid].inGame = True       
         else:
             game = Game()
             game.addPlayer(player)
             self.games[game] = game
             player.game = game
-            player.Send({"action": "message", "message": "Waiting for other players to join..."})    
+            player.Send({"action": "isHost", "message": True})   
+            self.other = player
             
     def getAvailableGames(self):
         game = None
@@ -49,6 +54,7 @@ class GameServer(Server):
                 game = g
                 break
         return game
+    
     def getPlayer(self, playerUUID):
         uuid = self.convertUUID(playerUUID)
         return self.players[uuid]
@@ -61,7 +67,7 @@ class GameServer(Server):
         if game.minPlayersConnected() == False:
             if len(players) >= 1:
                 [p.Send({"action": "message", "message": "Not enough players"}) for p in players]
-                [p.Send({"action":"inGame", "message": False}) for p in players]
+                [p.Send({"action":"inGameStart", "message": None}) for p in players]
             else:
                 del self.games[game]
         else:
@@ -79,6 +85,7 @@ class GameServer(Server):
         return uuid.UUID(strUUID)
     
     def SendToAll(self, data):
+        print self.players
         [p.Send(data) for p in self.players]
     
     def Launch(self):
